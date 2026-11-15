@@ -1,4 +1,4 @@
-package com.alife.game2048 /*pkg*/ ;
+package com.alife.game2048;
 
 import android.app.Activity;
 import android.content.Context;
@@ -79,6 +79,8 @@ public class MainActivity extends Activity {
         private float boardLeft, boardTop, boardSize, gap, cellSize;
         private float downX, downY;
         private final SharedPreferences prefs;
+        private float swipeThresholdPx;
+        private float tipTextSizePx;
 
         GameView(Context c) {
             super(c);
@@ -86,6 +88,7 @@ public class MainActivity extends Activity {
             text.setTextAlign(Paint.Align.CENTER);
             prefs = c.getSharedPreferences("game2048", Context.MODE_PRIVATE);
             best = prefs.getInt("best", 0);
+            swipeThresholdPx = 18f * getResources().getDisplayMetrics().density;
             restart();
         }
 
@@ -300,6 +303,8 @@ public class MainActivity extends Activity {
 
             int w = getWidth();
             int h = getHeight();
+            if (w <= 0 || h <= 0) return;
+
             float pad = w * 0.045f;
             float avail = h - pad * 2f;
             float headerH = avail * 0.16f;
@@ -368,9 +373,10 @@ public class MainActivity extends Activity {
                 }
             }
 
+            tipTextSizePx = Math.max(h * 0.020f, 12f * getResources().getDisplayMetrics().density);
             text.setTextAlign(Paint.Align.CENTER);
             text.setColor(0xFF9C8F84);
-            text.setTextSize(Math.max(h * 0.020f, 12f * getResources().getDisplayMetrics().density));
+            text.setTextSize(tipTextSizePx);
             cv.drawText("方向键 / WASD 或滑动屏幕，R 重开",
                     w / 2f, boardTop + boardSize + pad * 1.3f, text);
 
@@ -389,7 +395,10 @@ public class MainActivity extends Activity {
                 cv.drawText(tip, w / 2f, boardTop + boardSize * 0.58f, text);
             }
 
-            postInvalidateDelayed(16);
+            // 只在动画或新方块弹出期间继续请求重绘，静止时不空转刷帧
+            if (animating || popIdx >= 0) {
+                postInvalidateDelayed(16);
+            }
         }
 
         @Override
@@ -402,7 +411,7 @@ public class MainActivity extends Activity {
             if (e.getActionMasked() == MotionEvent.ACTION_UP) {
                 float dx = e.getX() - downX;
                 float dy = e.getY() - downY;
-                float th = 18f * getResources().getDisplayMetrics().density;
+                float th = swipeThresholdPx;
                 if (Math.abs(dx) < th && Math.abs(dy) < th) {
                     if (gameOver) restart();
                     else if (showWin) { showWin = false; invalidate(); }
