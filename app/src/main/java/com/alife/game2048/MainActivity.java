@@ -1,3 +1,5 @@
+package com.alife.game2048 /*pkg*/ ;
+
 import android.app.Activity;
 import android.content.Context;
 import android.content.SharedPreferences;
